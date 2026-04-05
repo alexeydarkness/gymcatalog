@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/gym.dart';
 import '../styles/app_styles.dart';
+import 'gym_edit_screen.dart';
 
 class GymDetailScreen extends StatelessWidget{
   final Gym gym;
@@ -14,6 +15,20 @@ class GymDetailScreen extends StatelessWidget{
         title: Text(gym.name),
         backgroundColor: AppStyles.primaryColor,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.edit),
+            onPressed: () async {
+              final edited = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => GymEditScreen(gym: gym)),
+              );
+              if (edited != null) {
+                Navigator.pop(context, edited);
+              }
+            }, 
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(AppStyles.paddingMedium),
