@@ -137,7 +137,7 @@ class GymEditScreen extends StatefulWidget{
                     if (_formKey.currentState!.validate()) {
                       _formKey.currentState!.save();
                       final gym = Gym(
-                        id: widget.gym?.id ?? DateTime.now().millisecondsSinceEpoch,
+                        id: widget.gym?.id ?? 0,
                         name: _name,
                         address: _address,
                         imageUrl: _imageUrl,

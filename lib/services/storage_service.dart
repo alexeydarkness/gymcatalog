@@ -6,7 +6,7 @@ class StorageService {
     prefs.setString('user_role', role);
   }
 
-  static Future<String?> gerRole(String role) async {
+  static Future<String?> getRole(String role) async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('user_role');
   }
@@ -22,16 +22,16 @@ class StorageService {
     return list.map((s) => int.parse(s)).toList();
   }
 
-  static Future<void> saveDeleted(List<int> ids) async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setStringList('deleted', ids.map((id) => id.toString()).toList());
-  }
+  // static Future<void> saveDeleted(List<int> ids) async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   prefs.setStringList('deleted', ids.map((id) => id.toString()).toList());
+  // }
   
-  static Future<List<int>> getDeleted() async {
-    final prefs = await SharedPreferences.getInstance();
-    final list = prefs.getStringList('deleted') ?? [];
-    return list.map((s) => int.parse(s)).toList();
-  }
+  // static Future<List<int>> getDeleted() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final list = prefs.getStringList('deleted') ?? [];
+  //   return list.map((s) => int.parse(s)).toList();
+  // }
 
   static Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();

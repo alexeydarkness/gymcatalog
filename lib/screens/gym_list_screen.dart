@@ -9,6 +9,7 @@ import 'favorites_screen.dart';
 import '../services/storage_service.dart';
 import 'profile_screen.dart';
 import 'trash_screen.dart';
+import 'login_screen.dart';
 
 class GymListScreen extends StatefulWidget {
 
@@ -78,12 +79,10 @@ class _GymListScreenState extends State<GymListScreen> {
     try {
       final gyms = await ApiServices.fetchGyms();
       final favoriteIds = await StorageService.getFavorites(widget.role);
-      final deletedIds = await StorageService.getDeleted();
       setState(() {
         _gyms = gyms;
         for (var gym in _gyms) {
           if (favoriteIds.contains(gym.id)) gym.isFavorite = true;
-          if (deletedIds.contains(gym.id)) gym.isDeleted = true;
         }
         _isLoading = false;
       });
@@ -143,26 +142,36 @@ class _GymListScreenState extends State<GymListScreen> {
         ],
       ),
       drawer: Drawer(
-        child: ListView(
+        child: Column(
           children: [
-            DrawerHeader(
-              child: Text('Меню', style: TextStyle(color: Colors.white, fontSize: 24),),
+            UserAccountsDrawerHeader(
               decoration: BoxDecoration(color: AppStyles.primaryColor),
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Icon(
+                  widget.role == 'admin' ? Icons.admin_panel_settings : Icons.person,
+                  size: 40,
+                  color: AppStyles.primaryColor,
+                ),
+              ),
+              accountName: Text(
+                widget.role == 'admin' ? 'Администратор' : 'Пользователь',
+                style: TextStyle(fontSize: 18),
+              ),
+              accountEmail: Text(widget.role == 'admin' ? 'admin' : 'user'),
             ),
             ListTile(
               leading: Icon(Icons.fitness_center),
               title: Text('Каталог'),
-              onTap: () {
-                Navigator.pop(context);
-              },
+              onTap: () => Navigator.pop(context),
             ),
             ListTile(
-              leading: Icon(Icons.favorite),
+              leading: Icon(Icons.favorite, color: Colors.red),
               title: Text('Избранное'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
-                  context, 
+                  context,
                   MaterialPageRoute(
                     builder: (context) => FavoritesScreen(
                       favorites: _gyms.where((g) => g.isFavorite).toList(),
@@ -172,21 +181,19 @@ class _GymListScreenState extends State<GymListScreen> {
               },
             ),
             if (widget.role == 'admin')
-            ListTile(
-              leading: Icon(Icons.delete),
-              title: Text('Корзина'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TrashScreen(
-                      deletedGyms: _gyms.where((g) => g.isDeleted).toList(),
+              ListTile(
+                leading: Icon(Icons.delete, color: Colors.grey),
+                title: Text('Корзина'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TrashScreen(),
                     ),
-                  ),
-                );
-              },
-            ),
+                  ).then((_) => _loadGyms());
+                },
+              ),
             ListTile(
               leading: Icon(Icons.person),
               title: Text('Профиль'),
@@ -202,10 +209,25 @@ class _GymListScreenState extends State<GymListScreen> {
                   ),
                 );
               },
-            )                        
+            ),
+            Spacer(),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.logout, color: AppStyles.errorColor),
+              title: Text('Выйти', style: TextStyle(color: AppStyles.errorColor)),
+              onTap: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginScreen()),
+                  (route) => false,
+                );
+              },
+            ),
+            SizedBox(height: AppStyles.paddingMedium),
           ],
         ),
       ),
+
       floatingActionButton: widget.role == 'admin' 
         ? FloatingActionButton(
           onPressed: () async {
@@ -214,9 +236,14 @@ class _GymListScreenState extends State<GymListScreen> {
               MaterialPageRoute(builder: (context) => GymEditScreen()),
             );
             if (newGym != null) {
-              setState(() {
-                _gyms.add(newGym);
-              });
+              try {
+                await ApiServices.createGym(newGym);
+                _loadGyms();
+              _resetPagination();
+              } catch (e) {
+                print('Ошибка при создании таблицы : $e');
+              }
+
             }
           },
         backgroundColor: AppStyles.primaryColor,
@@ -318,13 +345,21 @@ class _GymListScreenState extends State<GymListScreen> {
                       color: gym.isFavorite ? Colors.red : null,
                     ),
                   ),
-                  onTap: () {
-                    Navigator.push(
+                  onTap: () async {
+                    final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => GymDetailScreen(gym: gym),
                       ),
                     );
+                    if (result != null && result is Gym) {
+                      try {
+                      await ApiServices.updateGym(result.id, result);
+                        _loadGyms();
+                      } catch (e) {
+                        print('Ошибка обновления: $e');
+                      }
+                    }
                   },
                 ),
               ],
@@ -340,15 +375,22 @@ class _GymListScreenState extends State<GymListScreen> {
                 padding: EdgeInsets.only(right: 20),
                 child: Icon(Icons.delete, color: Colors.white),
               ), 
-              onDismissed: (direction) {
+              onDismissed: (direction) async {
+                final deletedGym = gym;
+
                 setState(() {
-                  gym.isDeleted = true;
+                  _displayedGyms.remove(gym);
                 });
-                StorageService.saveDeleted(
-                  _gyms.where((g) => g.isDeleted).map((g) => g.id).toList(),
-                );
-                _refreshDisplayed();
-              },
+                try {
+                  await ApiServices.deleteGym(gym.id);
+                  print('Зал удален');
+                  setState(() {
+                    deletedGym.isDeleted = true;
+                  });
+                } catch (e) {
+                  print(e);
+                }
+            },
               child: card,
           );
         }

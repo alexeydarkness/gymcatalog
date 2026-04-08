@@ -26,7 +26,7 @@ class ProfileScreen extends StatelessWidget {
             Icon(Icons.account_circle, size: 100, color: AppStyles.primaryColor),
             SizedBox(height: AppStyles.paddingMedium),
             Text(
-              role == 'admin' ? 'Аминистратор' : 'Пользователь',
+              role == 'admin' ? 'Администратор' : 'Пользователь',
               style: AppStyles.titleStyle,
             ),
             SizedBox(height: AppStyles.paddingSmall),
