@@ -6,32 +6,21 @@ class StorageService {
     prefs.setString('user_role', role);
   }
 
-  static Future<String?> getRole(String role) async {
+  static Future<String?> getRole() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('user_role');
   }
 
-  static Future<void> saveFavorites(List<int> ids, String role) async {
+  static Future<void> saveFavorites(List<int> ids, String username) async {
     final prefs = await SharedPreferences.getInstance();
-    prefs.setStringList('favorites_$role', ids.map((id) => id.toString()).toList());
+    prefs.setStringList('favorites_$username', ids.map((id) => id.toString()).toList());
   }
 
-  static Future<List<int>> getFavorites(String role) async {
+  static Future<List<int>> getFavorites(String username) async {
     final prefs = await SharedPreferences.getInstance();
-    final list = prefs.getStringList('favorites_$role') ?? [];
+    final list = prefs.getStringList('favorites_$username') ?? [];
     return list.map((s) => int.parse(s)).toList();
   }
-
-  // static Future<void> saveDeleted(List<int> ids) async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   prefs.setStringList('deleted', ids.map((id) => id.toString()).toList());
-  // }
-  
-  // static Future<List<int>> getDeleted() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   final list = prefs.getStringList('deleted') ?? [];
-  //   return list.map((s) => int.parse(s)).toList();
-  // }
 
   static Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();

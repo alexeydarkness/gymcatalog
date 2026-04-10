@@ -53,53 +53,54 @@ class GymEditScreen extends StatefulWidget{
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextFormField(
-                initialValue: _name,
-                decoration: InputDecoration(labelText: 'Название зала'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Введите название';
-                  return null;
+                  initialValue: _name,
+                  decoration: InputDecoration(labelText: 'Название зала'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return 'Введите название';
+                    return null;
+                  },
+                  onSaved: (value) => _name = value!,
+                ),
+              SizedBox(height: AppStyles.paddingSmall),
+              TextFormField(
+                  initialValue: _address,
+                  decoration: InputDecoration(labelText: 'Адрес'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return 'Введите адрес';
+                    return null;
+                  },
+                  onSaved: (value) => _address = value!,
+                ),
+              SizedBox(height: AppStyles.paddingSmall),
+              TextFormField(
+                initialValue: _imageUrl,
+                decoration: InputDecoration(labelText: 'URL изображения'),
+                // доделать валидацию
+                onSaved: (value) => _imageUrl = value ?? '',
+                ),
+              SizedBox(height: AppStyles.paddingSmall),
+              Text('Рейтинг: ${_rating.toStringAsFixed(1)}', style: AppStyles.titleStyle),
+              Slider(
+                value: _rating,
+                min: 0,
+                max: 5,
+                divisions: 50,
+                label: _rating.toStringAsFixed(1),
+                onChanged: (value) {
+                  setState(() => _rating = value);
                 },
-                onSaved: (value) => _name = value!,
               ),
               SizedBox(height: AppStyles.paddingSmall),
               TextFormField(
-                initialValue: _address,
-                decoration: InputDecoration(labelText: 'Адрес'),
+                initialValue: _pricePerMonth > 0 ? _pricePerMonth.toString() : '',
+                decoration: InputDecoration(labelText: 'Цена за месяц'),
+                keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Введите адрес';
+                  if (double.tryParse(value ?? '') == null) return 'Введите число';
                   return null;
                 },
-                onSaved: (value) => _address = value!,
+                onSaved: (value) => _pricePerMonth = double.parse(value!),
               ),
-              SizedBox(height: AppStyles.paddingSmall),
-              TextFormField(
-              initialValue: _imageUrl,
-              decoration: InputDecoration(labelText: 'URL изображения'),
-              onSaved: (value) => _imageUrl = value ?? '',
-            ),
-              SizedBox(height: AppStyles.paddingSmall),
-              TextFormField(
-              initialValue: _rating > 0 ? _rating.toString() : '',
-              decoration: InputDecoration(labelText: 'Рейтинг (0-5)'),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                final num = double.tryParse(value ?? '');
-                if (num == null || num < 0 || num > 5) return 'Введите число от 0 до 5';
-                return null;
-              },
-              onSaved: (value) => _rating = double.parse(value!),
-            ),
-              SizedBox(height: AppStyles.paddingSmall),
-              TextFormField(
-              initialValue: _pricePerMonth > 0 ? _pricePerMonth.toString() : '',
-              decoration: InputDecoration(labelText: 'Цена за месяц'),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (double.tryParse(value ?? '') == null) return 'Введите число';
-                return null;
-              },
-              onSaved: (value) => _pricePerMonth = double.parse(value!),
-            ),
               SizedBox(height: AppStyles.paddingMedium),
               Text('Тип зала', style: AppStyles.titleStyle),
               ..._types.map((type) {

@@ -3,9 +3,6 @@ import '../models/gym.dart';
 import '../styles/app_styles.dart';
 import '../services/api_services.dart';
 class TrashScreen extends StatefulWidget{
-  // final List<Gym> deletedGyms;
-
-  // const TrashScreen({required this.deletedGyms});
 
   const TrashScreen();
 
@@ -32,7 +29,9 @@ class _TrashScreenState extends State<TrashScreen> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      print(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка загрузки корзины: $e')),
+      );
     }
   }
 
@@ -62,7 +61,9 @@ class _TrashScreenState extends State<TrashScreen> {
                       _deletedGyms.removeAt(index);
                   });
                   } catch (e) {
-                    print(e);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Ошибка восстановления: $e')),
+                    );
                   }
                 },
               ),

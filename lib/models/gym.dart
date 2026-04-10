@@ -31,10 +31,10 @@ class Gym {
       name: json['name'],
       address: json['address'],
       imageUrl: json['imageUrl'] ?? '',
-      rating: json['rating'].toDouble(),
-      pricePerMonth: json['pricePerMonth'].toDouble(),
-      type: json['type'],
-      amenities: List<String>.from(json['amenities']),
+      rating: (json['rating'] ?? 0).toDouble(),
+      pricePerMonth: (json['pricePerMonth'] ?? 0).toDouble(),
+      type: json['type'] ?? '',
+      amenities: List<String>.from(json['amenities'] ?? []),
       isDeleted: json['deleted'] ?? false,      
     );
   }

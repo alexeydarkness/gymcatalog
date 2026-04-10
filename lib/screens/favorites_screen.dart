@@ -4,9 +4,11 @@ import '../styles/app_styles.dart';
 import 'gym_detail_screen.dart';
 
 class FavoritesScreen extends StatelessWidget{
-  final List<Gym> favorites;
+  final List<Gym> gyms;
 
-  const FavoritesScreen({required this.favorites});
+  const FavoritesScreen({required this.gyms});
+
+  List<Gym> get favorites => gyms.where((g) => g.isFavorite).toList();
 
   @override
   Widget build(BuildContext context) {

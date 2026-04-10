@@ -1,11 +1,8 @@
 import 'package:curs_proj/providers/gym_provider.dart';
 import 'package:curs_proj/screens/login_screen.dart';
+import 'package:curs_proj/styles/app_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'screens/gym_list_screen.dart';
-import 'screens/login_screen.dart';
-import '../services/storage_service.dart';
-
 
 void main() async {
 
@@ -28,6 +25,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF1565C0)),
         useMaterial3: true,
+        elevatedButtonTheme: AppStyles.elevatedButtonTheme,
+        cardTheme: AppStyles.cardTheme,
       ),
       home: LoginScreen(),
     );

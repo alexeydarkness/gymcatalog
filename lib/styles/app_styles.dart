@@ -26,4 +26,21 @@ class AppStyles {
   static const paddingSmall = 8.0;
   static const paddingMedium  = 16.0;
   static const paddingLarge  = 24.0;
+
+  static final elevatedButtonTheme = ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: primaryColor,
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    ),
+  );
+
+  static final cardTheme = CardThemeData(
+    elevation: 3,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+  );
 }

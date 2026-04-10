@@ -10,6 +10,9 @@ class GymProvider extends ChangeNotifier {
   String? selectedType;
   List<String> selectedAmenities = [];
   String role = 'user';
+  String username = '';
+  int _displayedCount = 10;
+  final int _pageSize = 10;
 
   List<Gym>get gyms => _gyms;
 
@@ -24,14 +27,38 @@ class GymProvider extends ChangeNotifier {
     }).toList();
   }
 
+
+
+
+  List<Gym>get displayedGyms {
+    final filtered = filteredGyms;
+    return filtered.take(_displayedCount).toList();
+  }
+
+  bool get hasMore => _displayedCount < filteredGyms.length;
+
+  void loadMore() {
+    _displayedCount += _pageSize;
+    notifyListeners();
+  }
+
+  void resetPagination() {
+    _displayedCount = _pageSize;
+    notifyListeners();
+  }
+
   List<Gym> get favoriteGyms => _gyms.where((g) => g.isFavorite).toList();
 
   List<Gym> get deletedGyms => _gyms.where((g) => g.isDeleted).toList();
 
   Future<void> loadGyms() async {
+    isLoading = true;
+    error = null;
+    notifyListeners();
+
     try {
       _gyms = await ApiServices.fetchGyms();
-      final favoriteIds = await StorageService.getFavorites(role);
+      final favoriteIds = await StorageService.getFavorites(username);
       for (var gym in _gyms) {
         if (favoriteIds.contains(gym.id)) gym.isFavorite = true;
       }
@@ -48,32 +75,55 @@ class GymProvider extends ChangeNotifier {
     gym.isFavorite = !gym.isFavorite;
     StorageService.saveFavorites(
       _gyms.where((g) => g.isFavorite).map((g) => g.id).toList(),
-      role,
+      username,
     );
     notifyListeners();
   }
 
-  void deleteGyms(Gym gym) {
+  Future<void> createGym(Gym gym) async {
+    await ApiServices.createGym(gym);
+    await loadGyms();
+  }
+  Future<void> updateGym(Gym gym) async {
+    await ApiServices.updateGym(gym.id, gym);
+    await loadGyms();
+  }
+  Future<void> deleteGym(int id) async {
+    await ApiServices.deleteGym(id);
+    final gym = _gyms.firstWhere((g) => g.id == id);
     gym.isDeleted = true;
-    notifyListeners();
+    await loadGyms();
   }
 
-  void restoreGym(Gym gym) {
-    gym.isDeleted = false;
+  Future<void> loadDeletedGyms() async {
+    isLoading = true;
     notifyListeners();
-  }
-
-  void add(Gym gym) {
-    _gyms.add(gym);
-    notifyListeners();
-  }
+    try {
+      final deleted = await ApiServices.fetchDeletedGyms();
+      _gyms.removeWhere((g) => g.isDeleted);
+      _gyms.addAll(deleted);
+      isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      error = e.toString();
+      isLoading = false;
+      notifyListeners();
+    }
+  }    
 
   void setFilters(String? type, List<String> amenities) {
     selectedType = type;
     selectedAmenities = amenities;
     notifyListeners();
   }
-  
 
+  void setRole(String newRole) {
+    role = newRole;
+    notifyListeners();
+  }
+  
+  void setUsername(String name) {
+    username = name;
+  }
 
 }

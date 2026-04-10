@@ -5,8 +5,9 @@ import 'gym_edit_screen.dart';
 
 class GymDetailScreen extends StatelessWidget{
   final Gym gym;
+  final String role;
   
-  const GymDetailScreen({required this.gym});
+  const GymDetailScreen({required this.gym, this.role = 'user'});
 
   @override
   Widget build(BuildContext context) {
@@ -16,18 +17,19 @@ class GymDetailScreen extends StatelessWidget{
         backgroundColor: AppStyles.primaryColor,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: Icon(Icons.edit),
-            onPressed: () async {
-              final edited = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => GymEditScreen(gym: gym)),
-              );
-              if (edited != null) {
-                Navigator.pop(context, edited);
-              }
-            },
-          ),
+          if (role == 'admin')
+            IconButton(
+              icon: Icon(Icons.edit),
+              onPressed: () async {
+                final edited = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => GymEditScreen(gym: gym)),
+                );
+                if (edited != null) {
+                  Navigator.pop(context, edited);
+                }
+              },
+            ),
         ],
       ),
       body: SingleChildScrollView(

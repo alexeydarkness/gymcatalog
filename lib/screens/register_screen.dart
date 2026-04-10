@@ -1,59 +1,55 @@
-import 'package:curs_proj/services/api_services.dart';
 import 'package:flutter/material.dart';
 import '../styles/app_styles.dart';
+import '../services/api_services.dart';
 import 'gym_list_screen.dart';
-import 'register_screen.dart';
 
-class LoginScreen extends StatefulWidget{
+class RegisterScreen extends StatefulWidget {
   @override
-  State<StatefulWidget> createState() => _LoginScreenState();
-    
+  State<StatefulWidget> createState() => _RegisterScreenState();
+
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _loginController = TextEditingController();
   final _passwordController = TextEditingController();
+  String _role = 'user';
   String? _error;
   bool _obscurePassword = true;
   bool _isLoading = false;
 
-
   @override
   void dispose() {
     _loginController.dispose();
-    _passwordController.dispose();  
+    _passwordController.dispose();
     super.dispose();
   }
 
-  void _login() async { 
+  void _register() async {
     if (_isLoading) return;
 
-    final username = _loginController.text.trim();
+    final login = _loginController.text.trim();
     final password = _passwordController.text.trim();
+    
 
-    if (username.isEmpty || password.isEmpty) {
-      setState(() =>_error = 'Заполните все поля');
+    if (login.isEmpty || password.isEmpty) {
+      setState(() => _error = 'Заполните все поля');
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
     try {
-      final result = await ApiServices.login(username, password);
+      final result = await ApiServices.register(login, password, _role);
       Navigator.pushReplacement(
-        context, MaterialPageRoute(
+        context,
+        MaterialPageRoute(
           builder: (context) => GymListScreen(
             role: result['role'],
-            username: result['username']
+            username: result['username'],
           ),
         ),
       );
     } catch (e) {
       setState(() {
-        _error = 'Неверный пароль или логин';
+        _error = e.toString().replaceFirst('Exception: ', '');
       });
     } finally {
       setState(() => _isLoading = false);
@@ -81,14 +77,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: AppStyles.primaryColor,
-                      shape: BoxShape.circle,
+                      shape: BoxShape.circle,  
                     ),
-                    child: Icon(Icons.fitness_center, size: 50, color: Colors.white),
+                    child: Icon(Icons.person_add, size: 50, color: Colors.white),
                   ),
                   SizedBox(height: AppStyles.paddingMedium),
-                  Text('Каталог залов', style: AppStyles.titleStyle),
-                  SizedBox(height: 4),
-                  Text('Войдите в аккаунт', style: AppStyles.subtitleStyle),
+                  Text('Регистрация', style: AppStyles.titleStyle),
                   SizedBox(height: AppStyles.paddingLarge),
                   TextField(
                     controller: _loginController,
@@ -100,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(height: AppStyles.paddingMedium),
+                  SizedBox(height: AppStyles.paddingLarge),
                   TextField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
@@ -115,49 +109,53 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                  ), 
+                  SizedBox(height: AppStyles.paddingMedium),
+                  DropdownButtonFormField<String>(
+                    value: _role, 
+                    decoration: InputDecoration(
+                      labelText: 'Роль',
+                      prefixIcon: Icon(Icons.badge),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: [
+                      DropdownMenuItem(value: 'user', child: Text('Пользователь')),
+                      DropdownMenuItem(value: 'admin', child: Text('Администратор'))
+                    ],
+                    onChanged: (value) => setState(() => _role = value!),
                   ),
                   if (_error != null)
                     Padding(
                       padding: EdgeInsets.only(top: AppStyles.paddingSmall),
-                      child: Text(_error!, style: TextStyle(color: AppStyles.errorColor)),
+                    child: Text(_error!, style: TextStyle(color: AppStyles.errorColor)),
                     ),
                   SizedBox(height: AppStyles.paddingLarge),
                   SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: _login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppStyles.primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isLoading
+                      onPressed: _register,
+                      child: _isLoading 
                           ? SizedBox(
                             height: 20,
                             width: 20,
                             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                             )
-                          : Text('Войти', style: TextStyle(fontSize: 16)),
+                          : Text('Зарегистрироваться', style: TextStyle(fontSize: 16)),
                     ),
                   ),
                   SizedBox(height: AppStyles.paddingSmall),
                   TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => RegisterScreen()),
-                      );
-                    },
-                    child: Text('Нет аккаунта? Зарегистрироваться'),
-                  ),    
+                    onPressed: () => Navigator.pop(context), 
+                    child: Text('Уже есть аккаунт? Войти')
+                  ),                              
                 ],
               ),
             ),
           ),
-        ),
+        )
       ),
     );
   }
