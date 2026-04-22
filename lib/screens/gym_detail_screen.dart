@@ -50,10 +50,8 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
   }
 
   Future<void> _refreshGymRating() async {
-    // после добавления/удаления отзыва нужно обновить карточку в провайдере
     final provider = context.read<GymProvider>();
     await provider.loadGyms();
-    // находим обновлённый зал, чтобы отобразить свежий средний рейтинг
     final updated = provider.gyms.firstWhere(
       (g) => g.id == _gym.id,
       orElse: () => _gym,
@@ -64,7 +62,6 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
   Future<void> _openReviewDialog() async {
     final provider = context.read<GymProvider>();
     final username = provider.username;
-
     if (username.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Войдите, чтобы оставить отзыв')),
@@ -72,19 +69,17 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
       return;
     }
 
-    // ищем существующий отзыв юзера, чтобы предзаполнить форму
     final mine = _reviews.where((r) => r.username == username).toList();
     final existing = mine.isNotEmpty ? mine.first : null;
 
     final result = await showDialog<_ReviewInput>(
       context: context,
-      builder: (context) => _ReviewDialog(
+      builder: (_) => _ReviewDialog(
         initialRating: existing?.rating ?? 5,
         initialText: existing?.text ?? '',
         isEditing: existing != null,
       ),
     );
-
     if (result == null) return;
 
     try {
@@ -102,9 +97,7 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     }
   }
 
@@ -112,7 +105,7 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
     final provider = context.read<GymProvider>();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (_) => AlertDialog(
         title: Text('Удалить отзыв?'),
         content: Text('Действие необратимо'),
         actions: [
@@ -146,142 +139,243 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<GymProvider>();
     final currentUser = provider.username;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_gym.name),
-        backgroundColor: AppStyles.primaryColor,
-        foregroundColor: Colors.white,
-        actions: [
-          if (widget.role == 'admin')
-            IconButton(
-              icon: Icon(Icons.edit),
-              onPressed: () async {
-                final edited = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => GymEditScreen(gym: _gym)),
-                );
-                if (edited != null) {
-                  Navigator.pop(context, edited);
-                }
-              },
-            ),
-        ],
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openReviewDialog,
         backgroundColor: AppStyles.primaryColor,
         foregroundColor: Colors.white,
         icon: Icon(Icons.rate_review),
-        label: Text(
-          _reviews.any((r) => r.username == currentUser)
-              ? 'Изменить отзыв'
-              : 'Оставить отзыв',
-        ),
+        label: Text(_reviews.any((r) => r.username == currentUser) ? 'Изменить отзыв' : 'Оставить отзыв'),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_gym.imageUrl.isNotEmpty)
-              Image.network(
-                _gym.imageUrl,
-                width: double.infinity,
-                height: 250,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 250,
-                  color: Colors.grey[200],
-                  child: Icon(Icons.fitness_center, size: 60, color: Colors.grey),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 280,
+            pinned: true,
+            backgroundColor: isDark ? AppStyles.darkBg : Colors.white,
+            foregroundColor: isDark ? Colors.white : Colors.black,
+            actions: [
+              if (widget.role == 'admin')
+                IconButton(
+                  icon: Icon(Icons.edit),
+                  onPressed: () async {
+                    final edited = await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => GymEditScreen(gym: _gym)),
+                    );
+                    if (edited != null) Navigator.pop(context, edited);
+                  },
                 ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: EdgeInsets.symmetric(horizontal: 56, vertical: 14),
+              title: Text(
+                _gym.name,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            Padding(
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Hero(
+                    tag: 'gym-image-${_gym.id}',
+                    child: _gym.imageUrl.isNotEmpty
+                        ? Image.network(
+                            _gym.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              decoration: BoxDecoration(gradient: AppStyles.primaryGradient),
+                              child: Icon(Icons.fitness_center, size: 80, color: Colors.white30),
+                            ),
+                          )
+                        : Container(
+                            decoration: BoxDecoration(gradient: AppStyles.primaryGradient),
+                            child: Icon(Icons.fitness_center, size: 80, color: Colors.white30),
+                          ),
+                  ),
+                  // тёмная виньетка снизу
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black87],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
               padding: EdgeInsets.all(AppStyles.paddingMedium),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(_gym.name, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                  SizedBox(height: AppStyles.paddingSmall),
-                  Row(
-                    children: [
-                      Icon(Icons.location_on, size: 18, color: Colors.grey),
-                      SizedBox(width: 4),
-                      Expanded(child: Text(_gym.address, style: AppStyles.subtitleStyle)),
-                    ],
-                  ),
-                  SizedBox(height: AppStyles.paddingMedium),
-                  Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(AppStyles.paddingMedium),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          Column(
-                            children: [
-                              Icon(Icons.star, color: Colors.amber, size: 28),
-                              SizedBox(height: 4),
-                              Text(
-                                _reviews.isEmpty ? '—' : _gym.rating.toStringAsFixed(1),
-                                style: AppStyles.titleStyle,
-                              ),
-                              Text(
-                                _reviews.isEmpty
-                                    ? 'Нет оценок'
-                                    : 'Средний (${_reviews.length})',
-                                style: AppStyles.subtitleStyle,
-                              ),
-                            ],
-                          ),
-                          Column(
-                            children: [
-                              Icon(Icons.attach_money, color: Colors.green, size: 28),
-                              SizedBox(height: 4),
-                              Text('${_gym.pricePerMonth.toInt()}', style: AppStyles.titleStyle),
-                              Text('₽/мес', style: AppStyles.subtitleStyle),
-                            ],
-                          ),
-                          Column(
-                            children: [
-                              Icon(Icons.category, color: AppStyles.primaryColor, size: 28),
-                              SizedBox(height: 4),
-                              Text(_gym.type, style: AppStyles.titleStyle),
-                              Text('Тип', style: AppStyles.subtitleStyle),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: AppStyles.paddingMedium),
-                  Text('Удобства', style: AppStyles.titleStyle),
-                  SizedBox(height: AppStyles.paddingSmall),
+                  // тип и адрес
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _gym.amenities.map((a) {
-                      return Chip(
-                        avatar: Icon(_getAmenityIcon(a), size: 18),
-                        label: Text(a),
-                      );
-                    }).toList(),
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppStyles.primaryColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
+                        ),
+                        child: Text(
+                          _gym.type.toUpperCase(),
+                          style: TextStyle(
+                            color: AppStyles.primaryColor,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                          SizedBox(width: 4),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width - 180),
+                            child: Text(
+                              _gym.address,
+                              style: AppStyles.subtitleStyle,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
+                  SizedBox(height: AppStyles.paddingMedium),
+                  // три метрики
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _metricCard(
+                          icon: Icons.star,
+                          iconColor: Colors.amber,
+                          value: _gym.rating > 0 ? _gym.rating.toStringAsFixed(1) : '—',
+                          label: _reviews.isEmpty ? 'Нет оценок' : '${_reviews.length} отзывов',
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: _metricCard(
+                          icon: Icons.payments_outlined,
+                          iconColor: AppStyles.primaryColor,
+                          value: '${_gym.pricePerMonth.toInt()} ₽',
+                          label: 'в месяц',
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: _metricCard(
+                          icon: Icons.check_circle_outline,
+                          iconColor: Colors.green,
+                          value: '${_gym.amenities.length}',
+                          label: 'удобств',
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: AppStyles.paddingLarge),
+                  Text('Удобства', style: AppStyles.titleStyle),
+                  SizedBox(height: AppStyles.paddingSmall),
+                  if (_gym.amenities.isEmpty)
+                    Text('Информация не указана', style: AppStyles.subtitleStyle)
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _gym.amenities.map((a) {
+                        return Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppStyles.darkSurface : Color(0xFFEFEFF2),
+                            borderRadius: BorderRadius.circular(AppStyles.radiusSmall + 4),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(_getAmenityIcon(a), size: 16, color: AppStyles.primaryColor),
+                              SizedBox(width: 6),
+                              Text(a, style: TextStyle(fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   SizedBox(height: AppStyles.paddingLarge),
                   Row(
                     children: [
                       Text('Отзывы', style: AppStyles.titleStyle),
                       SizedBox(width: 8),
-                      Text('(${_reviews.length})', style: AppStyles.subtitleStyle),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppStyles.primaryColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${_reviews.length}',
+                          style: TextStyle(
+                            color: AppStyles.primaryColor,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   SizedBox(height: AppStyles.paddingSmall),
                   _buildReviewsSection(currentUser, provider.role),
-                  // отступ снизу, чтобы FAB не закрывал последний отзыв
-                  SizedBox(height: 80),
+                  SizedBox(height: 90),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _metricCard({
+    required IconData icon,
+    required Color iconColor,
+    required String value,
+    required String label,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? AppStyles.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+        boxShadow: isDark ? null : [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: iconColor, size: 22),
+          SizedBox(height: 6),
+          Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          SizedBox(height: 2),
+          Text(label, style: TextStyle(fontSize: 11, color: Colors.grey), textAlign: TextAlign.center),
+        ],
       ),
     );
   }
@@ -289,28 +383,39 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
   Widget _buildReviewsSection(String currentUser, String role) {
     if (_reviewsLoading) {
       return Padding(
-        padding: EdgeInsets.symmetric(vertical: AppStyles.paddingMedium),
-        child: Center(child: CircularProgressIndicator()),
+        padding: EdgeInsets.all(AppStyles.paddingMedium),
+        child: Center(child: CircularProgressIndicator(color: AppStyles.primaryColor)),
       );
     }
     if (_reviewsError != null) {
       return Padding(
-        padding: EdgeInsets.symmetric(vertical: AppStyles.paddingMedium),
+        padding: EdgeInsets.all(AppStyles.paddingMedium),
         child: Column(
           children: [
-            Text('Ошибка: $_reviewsError',
-                style: TextStyle(color: AppStyles.errorColor)),
+            Text('Ошибка: $_reviewsError', style: TextStyle(color: AppStyles.errorColor)),
             TextButton(onPressed: _loadReviews, child: Text('Повторить')),
           ],
         ),
       );
     }
     if (_reviews.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.symmetric(vertical: AppStyles.paddingMedium),
-        child: Text(
-          'Пока нет отзывов. Будь первым!',
-          style: AppStyles.subtitleStyle,
+      return Container(
+        padding: EdgeInsets.all(AppStyles.paddingLarge),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? AppStyles.darkSurface
+              : Color(0xFFEFEFF2),
+          borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.rate_review_outlined, size: 40, color: Colors.grey),
+              SizedBox(height: 8),
+              Text('Пока нет отзывов', style: AppStyles.subtitleStyle),
+              Text('Будь первым!', style: AppStyles.subtitleStyle),
+            ],
+          ),
         ),
       );
     }
@@ -320,59 +425,90 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
   }
 
   Widget _buildReviewCard(Review r, String currentUser, String role) {
-    print('REVIEW in list: id=${r.id}, username=${r.username}, text=${r.text}');
     final canDelete = role == 'admin' || r.username == currentUser;
-    return Card(
-      margin: EdgeInsets.symmetric(vertical: AppStyles.paddingSmall),
-      child: Padding(
-        padding: EdgeInsets.all(AppStyles.paddingMedium),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: AppStyles.primaryColor,
-                  child: Text(
-                    r.username.isNotEmpty ? r.username[0].toUpperCase() : '?',
-                    style: TextStyle(color: Colors.white),
-                  ),
+    final isMine = r.username == currentUser;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: EdgeInsets.only(bottom: AppStyles.paddingSmall),
+      padding: EdgeInsets.all(AppStyles.paddingMedium),
+      decoration: BoxDecoration(
+        color: isDark ? AppStyles.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+        border: isMine ? Border.all(color: AppStyles.primaryColor.withOpacity(0.5), width: 1.5) : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: AppStyles.primaryGradient,
+                  shape: BoxShape.circle,
                 ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(r.username, style: TextStyle(fontWeight: FontWeight.bold)),
-                      Row(
-                        children: List.generate(5, (i) {
-                          return Icon(
-                            i < r.rating ? Icons.star : Icons.star_border,
-                            size: 16,
-                            color: Colors.amber,
-                          );
-                        }),
-                      ),
-                    ],
-                  ),
+                alignment: Alignment.center,
+                child: Text(
+                  r.username.isNotEmpty ? r.username[0].toUpperCase() : '?',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
                 ),
-                Text(
-                  _formatDate(r.createdAt),
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(r.username, style: TextStyle(fontWeight: FontWeight.w700)),
+                        if (isMine) ...[
+                          SizedBox(width: 6),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppStyles.primaryColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'вы',
+                              style: TextStyle(
+                                color: AppStyles.primaryColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    Row(
+                      children: List.generate(5, (i) {
+                        return Icon(
+                          i < r.rating ? Icons.star : Icons.star_border,
+                          size: 14,
+                          color: Colors.amber,
+                        );
+                      }),
+                    ),
+                  ],
                 ),
-                if (canDelete)
-                  IconButton(
-                    icon: Icon(Icons.delete_outline, size: 20, color: Colors.grey),
-                    onPressed: () => _deleteReview(r),
-                  ),
-              ],
-            ),
-            if (r.text.isNotEmpty) ...[
-              SizedBox(height: 8),
-              Text(r.text),
+              ),
+              Text(_formatDate(r.createdAt), style: TextStyle(fontSize: 12, color: Colors.grey)),
+              if (canDelete)
+                IconButton(
+                  icon: Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                  onPressed: () => _deleteReview(r),
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
             ],
+          ),
+          if (r.text.isNotEmpty) ...[
+            SizedBox(height: 8),
+            Text(r.text, style: TextStyle(height: 1.35)),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -399,7 +535,7 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
   }
 }
 
-// === диалог добавления/редактирования отзыва ===
+// === диалог отзыва ===
 
 class _ReviewInput {
   final int rating;
@@ -441,56 +577,74 @@ class _ReviewDialogState extends State<_ReviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.isEditing ? 'Редактировать отзыв' : 'Оставить отзыв'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Ваша оценка:', style: AppStyles.subtitleStyle),
-          SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (i) {
-              final value = i + 1;
-              return IconButton(
-                iconSize: 32,
-                padding: EdgeInsets.symmetric(horizontal: 2),
-                onPressed: () => setState(() => _rating = value),
-                icon: Icon(
-                  value <= _rating ? Icons.star : Icons.star_border,
-                  color: Colors.amber,
-                ),
-              );
-            }),
-          ),
-          SizedBox(height: 8),
-          TextField(
-            controller: _textController,
-            maxLines: 4,
-            maxLength: 1000,
-            decoration: InputDecoration(
-              labelText: 'Комментарий (необязательно)',
-              border: OutlineInputBorder(),
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppStyles.radiusLarge)),
+      child: Padding(
+        padding: EdgeInsets.all(AppStyles.paddingLarge),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.isEditing ? 'Изменить отзыв' : 'Оставить отзыв',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
             ),
-          ),
-        ],
+            SizedBox(height: AppStyles.paddingMedium),
+            Text('Ваша оценка', style: AppStyles.subtitleStyle),
+            SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (i) {
+                final value = i + 1;
+                return IconButton(
+                  iconSize: 36,
+                  onPressed: () => setState(() => _rating = value),
+                  icon: Icon(
+                    value <= _rating ? Icons.star : Icons.star_border,
+                    color: Colors.amber,
+                  ),
+                );
+              }),
+            ),
+            SizedBox(height: AppStyles.paddingSmall),
+            TextField(
+              controller: _textController,
+              maxLines: 4,
+              maxLength: 1000,
+              decoration: InputDecoration(
+                hintText: 'Комментарий (необязательно)',
+              ),
+            ),
+            SizedBox(height: AppStyles.paddingMedium),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppStyles.radiusSmall + 4),
+                      ),
+                    ),
+                    child: Text('Отмена'),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(
+                      context,
+                      _ReviewInput(_rating, _textController.text.trim()),
+                    ),
+                    child: Text('Сохранить'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text('Отмена'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.pop(
-              context,
-              _ReviewInput(_rating, _textController.text.trim()),
-            );
-          },
-          child: Text('Сохранить'),
-        ),
-      ],
     );
   }
 }

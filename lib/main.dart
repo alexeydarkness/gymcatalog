@@ -1,16 +1,19 @@
 import 'package:curs_proj/providers/gym_provider.dart';
+import 'package:curs_proj/providers/theme_provider.dart';
 import 'package:curs_proj/screens/login_screen.dart';
 import 'package:curs_proj/styles/app_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
-
-WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
 
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => GymProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => GymProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+      ],
       child: MyApp(),
     ),
   );
@@ -19,15 +22,13 @@ WidgetsFlutterBinding.ensureInitialized();
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Каталог залов',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF1565C0)),
-        useMaterial3: true,
-        elevatedButtonTheme: AppStyles.elevatedButtonTheme,
-        cardTheme: AppStyles.cardTheme,
-      ),
+      theme: AppStyles.lightTheme,
+      darkTheme: AppStyles.darkTheme,
+      themeMode: themeProvider.mode,
       home: LoginScreen(),
     );
   }
