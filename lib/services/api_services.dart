@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/gym.dart';
+import '../models/review.dart';
 
 class ApiServices {
   static const String _host = 'http://192.168.56.1:8080';
@@ -122,4 +123,57 @@ class ApiServices {
   static void logout() {
     _token = null;
   }
+
+  // === ОТЗЫВЫ ===
+
+  static Future<List<Review>> fetchReviews(int gymId) async {
+    final response = await http
+        .get(Uri.parse('$_host/api/gyms/$gymId/reviews'))
+        .timeout(_timeout);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonList = jsonDecode(utf8.decode(response.bodyBytes));
+      return jsonList.map((json) => Review.fromJson(json)).toList();
+    } else {
+      throw Exception('Ошибка загрузки отзывов: ${response.statusCode}');
+    }
+  }
+
+  static Future<Review> addReview({
+    required int gymId,
+    required String username,
+    required int rating,
+    required String text,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_host/api/gyms/$gymId/reviews'),
+      headers: _headers,
+      body: jsonEncode({
+        'username': username,
+        'rating': rating,
+        'text': text,
+      }),
+    ).timeout(_timeout);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return Review.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+    } else {
+      throw Exception('Ошибка отправки отзыва: ${response.statusCode}');
+    }
+  }
+
+  static Future<void> deleteReview({
+    required int reviewId,
+    required String username,
+    required String role,
+  }) async {
+    final uri = Uri.parse('$_host/api/reviews/$reviewId')
+        .replace(queryParameters: {'username': username, 'role': role});
+    final response = await http.delete(uri).timeout(_timeout);
+
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception('Ошибка удаления отзыва: ${response.statusCode}');
+    }
+  }
 }
+

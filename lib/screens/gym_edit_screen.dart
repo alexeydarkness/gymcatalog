@@ -79,24 +79,15 @@ class GymEditScreen extends StatefulWidget{
                 onSaved: (value) => _imageUrl = value ?? '',
                 ),
               SizedBox(height: AppStyles.paddingSmall),
-              Text('Рейтинг: ${_rating.toStringAsFixed(1)}', style: AppStyles.titleStyle),
-              Slider(
-                value: _rating,
-                min: 0,
-                max: 5,
-                divisions: 50,
-                label: _rating.toStringAsFixed(1),
-                onChanged: (value) {
-                  setState(() => _rating = value);
-                },
-              ),
-              SizedBox(height: AppStyles.paddingSmall),
               TextFormField(
                 initialValue: _pricePerMonth > 0 ? _pricePerMonth.toString() : '',
                 decoration: InputDecoration(labelText: 'Цена за месяц'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (double.tryParse(value ?? '') == null) return 'Введите число';
+                  final parsed = double.tryParse(value ?? '');
+                  if (parsed == null) return 'Введите число';
+                  if (parsed <= 0) return 'Цена должна быть больше 0';
+                  if (parsed > 1000000) return 'Слишком большое значение';
                   return null;
                 },
                 onSaved: (value) => _pricePerMonth = double.parse(value!),
