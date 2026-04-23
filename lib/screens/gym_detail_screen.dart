@@ -142,12 +142,22 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openReviewDialog,
-        backgroundColor: AppStyles.primaryColor,
-        foregroundColor: Colors.white,
-        icon: Icon(Icons.rate_review),
-        label: Text(_reviews.any((r) => r.username == currentUser) ? 'Изменить отзыв' : 'Оставить отзыв'),
+      floatingActionButton: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.95, end: 1.05),
+        duration: Duration(milliseconds: 1500),
+        curve: Curves.easeInOut,
+        // бесконечная пульсация через перезапуск в onEnd
+        builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+        onEnd: () => setState(() {}),
+        child: FloatingActionButton.extended(
+          onPressed: _openReviewDialog,
+          backgroundColor: AppStyles.primaryColor,
+          foregroundColor: Colors.white,
+          icon: Icon(Icons.rate_review),
+          label: Text(_reviews.any((r) => r.username == context.read<GymProvider>().username)
+              ? 'Изменить отзыв'
+              : 'Оставить отзыв'),
+        ),
       ),
       body: CustomScrollView(
         slivers: [

@@ -190,7 +190,22 @@ class _GymListScreenState extends State<GymListScreen> {
                     ),
                   );
                 }
-                return _buildGymCard(provider, gyms[index]);
+                return TweenAnimationBuilder<double>(
+                  key: ValueKey(gyms[index].id),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: Duration(milliseconds: 400),
+                  curve: Curves.easeOut,
+                  builder: (context, value, child) {
+                    return Opacity(
+                      opacity: value,
+                      child: Transform.translate(
+                        offset: Offset(0, (1 - value) * 20),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: _buildGymCard(provider, gyms[index]),
+                );
               },
             ),
     );
@@ -448,7 +463,19 @@ class _GymListScreenState extends State<GymListScreen> {
         onTap: onTap,
         child: Padding(
           padding: EdgeInsets.all(8),
-          child: Icon(icon, color: color, size: 20),
+          child: TweenAnimationBuilder<double>(
+            // ключ к иконке — при смене перезапускаем анимацию
+            key: ValueKey(icon.codePoint),
+            tween: Tween(begin: 0.5, end: 1.0),
+            duration: Duration(milliseconds: 300),
+            curve: Curves.elasticOut,
+            builder: (context, scale, child) {
+              return Transform.scale(
+                scale: scale,
+                child: Icon(icon, color: color, size: 20),
+              );
+            },
+          ),
         ),
       ),
     );

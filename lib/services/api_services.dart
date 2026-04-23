@@ -4,7 +4,7 @@ import '../models/gym.dart';
 import '../models/review.dart';
 
 class ApiServices {
-  static const String _host = 'http://192.168.56.1:8080';
+  static const String _host = 'http://localhost:8080';
   static const String _baseUrl = '$_host/api/gyms';
   static const String _authUrl = '$_host/api/auth';
   static const Duration _timeout = Duration(seconds: 10);
