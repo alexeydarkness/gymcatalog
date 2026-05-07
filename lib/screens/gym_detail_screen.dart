@@ -11,7 +11,7 @@ class GymDetailScreen extends StatefulWidget {
   final Gym gym;
   final String role;
 
-  const GymDetailScreen({required this.gym, this.role = 'user'});
+  const GymDetailScreen({super.key, required this.gym, this.role = 'user'});
 
   @override
   State<GymDetailScreen> createState() => _GymDetailScreenState();
@@ -64,7 +64,7 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
     final username = provider.username;
     if (username.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Войдите, чтобы оставить отзыв')),
+        const SnackBar(content: Text('Войдите, чтобы оставить отзыв')),
       );
       return;
     }
@@ -93,7 +93,9 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
       await _refreshGymRating();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(existing != null ? 'Отзыв обновлён' : 'Отзыв добавлен')),
+        SnackBar(
+          content: Text(existing != null ? 'Отзыв обновлён' : 'Отзыв добавлен'),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -106,13 +108,19 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('Удалить отзыв?'),
-        content: Text('Действие необратимо'),
+        title: const Text('Удалить отзыв?'),
+        content: const Text('Действие необратимо'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Отмена'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Удалить', style: TextStyle(color: AppStyles.errorColor)),
+            child: const Text(
+              'Удалить',
+              style: TextStyle(color: AppStyles.errorColor),
+            ),
           ),
         ],
       ),
@@ -139,58 +147,59 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<GymProvider>();
     final currentUser = provider.username;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppStyles.categoryGradient(_gym.type);
 
     return Scaffold(
-      floatingActionButton: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.95, end: 1.05),
-        duration: Duration(milliseconds: 1500),
-        curve: Curves.easeInOut,
-        // бесконечная пульсация через перезапуск в onEnd
-        builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
-        onEnd: () => setState(() {}),
-        child: FloatingActionButton.extended(
-          onPressed: _openReviewDialog,
-          backgroundColor: AppStyles.primaryColor,
-          foregroundColor: Colors.white,
-          icon: Icon(Icons.rate_review),
-          label: Text(_reviews.any((r) => r.username == context.read<GymProvider>().username)
-              ? 'Изменить отзыв'
-              : 'Оставить отзыв'),
-        ),
-      ),
+      backgroundColor: AppStyles.darkBg,
       body: CustomScrollView(
         slivers: [
+          // === HERO с градиентом по категории ===
           SliverAppBar(
-            expandedHeight: 280,
+            expandedHeight: 220,
             pinned: true,
-            backgroundColor: isDark ? AppStyles.darkBg : Colors.white,
-            foregroundColor: isDark ? Colors.white : Colors.black,
+            backgroundColor: AppStyles.darkBg,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            leading: Padding(
+              padding: const EdgeInsets.all(8),
+              child: _GlassButton(
+                icon: Icons.arrow_back,
+                onTap: () => Navigator.pop(context),
+              ),
+            ),
             actions: [
-              if (widget.role == 'admin')
-                IconButton(
-                  icon: Icon(Icons.edit),
-                  onPressed: () async {
-                    final edited = await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => GymEditScreen(gym: _gym)),
-                    );
-                    if (edited != null) Navigator.pop(context, edited);
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                child: _GlassButton(
+                  icon: _gym.isFavorite ? Icons.favorite : Icons.favorite_border,
+                  active: _gym.isFavorite,
+                  onTap: () {
+                    provider.toggleFavorite(_gym);
+                    setState(() {});
                   },
+                ),
+              ),
+              if (widget.role == 'admin')
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 8, 12, 8),
+                  child: _GlassButton(
+                    icon: Icons.edit,
+                    onTap: () async {
+                      final edited = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => GymEditScreen(gym: _gym),
+                        ),
+                      );
+                      if (edited != null && mounted) {
+                        Navigator.pop(context, edited);
+                      }
+                    },
+                  ),
                 ),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              titlePadding: EdgeInsets.symmetric(horizontal: 56, vertical: 14),
-              title: Text(
-                _gym.name,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
               background: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -200,159 +209,223 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
                         ? Image.network(
                             _gym.imageUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              decoration: BoxDecoration(gradient: AppStyles.primaryGradient),
-                              child: Icon(Icons.fitness_center, size: 80, color: Colors.white30),
-                            ),
+                            errorBuilder: (_, __, ___) => _heroGradient(colors),
                           )
-                        : Container(
-                            decoration: BoxDecoration(gradient: AppStyles.primaryGradient),
-                            child: Icon(Icons.fitness_center, size: 80, color: Colors.white30),
-                          ),
+                        : _heroGradient(colors),
                   ),
-                  // тёмная виньетка снизу
+                  if (_gym.imageUrl.isNotEmpty)
+                    Container(color: Colors.black.withValues(alpha: 0.4)),
+                  // Тёмный градиент снизу под текст
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black87],
+                        colors: [
+                          Colors.transparent,
+                          AppStyles.darkBg.withValues(alpha: 0.9),
+                        ],
                       ),
                     ),
+                  ),
+                  // Плашка статуса работы зала.
+                  // Зелёная "Сейчас открыто" — если зал НЕ в корзине;
+                  // серая "Не работает" — если админ удалил его в корзину.
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    child: _OpenStatusPill(isOpen: !_gym.isDeleted),
                   ),
                 ],
               ),
             ),
           ),
+
+          // === ОСНОВНОЕ ===
           SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.all(AppStyles.paddingMedium),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // тип и адрес
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+                  // Название + бейдж категории
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Expanded(
+                        child: Text(
+                          _gym.name,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: AppStyles.textPrimary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        margin: const EdgeInsets.only(top: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: AppStyles.primaryColor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
+                          color: AppStyles.primaryColor.withValues(alpha: 0.13),
+                          borderRadius: BorderRadius.circular(AppStyles.radiusPill),
+                          border: Border.all(
+                            color: AppStyles.primaryColor.withValues(alpha: 0.27),
+                          ),
                         ),
                         child: Text(
                           _gym.type.toUpperCase(),
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppStyles.primaryColor,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8,
                             fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.6,
                           ),
                         ),
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
-                          SizedBox(width: 4),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width - 180),
-                            child: Text(
-                              _gym.address,
-                              style: AppStyles.subtitleStyle,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 14,
+                        color: AppStyles.textTertiary,
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          _gym.address,
+                          style: const TextStyle(
+                            color: AppStyles.textTertiary,
+                            fontSize: 13,
                           ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: AppStyles.paddingMedium),
-                  // три метрики
+                  const SizedBox(height: 18),
+
+                  // === 3 stat-карточки ===
                   Row(
                     children: [
                       Expanded(
-                        child: _metricCard(
-                          icon: Icons.star,
-                          iconColor: Colors.amber,
-                          value: _gym.rating > 0 ? _gym.rating.toStringAsFixed(1) : '—',
-                          label: _reviews.isEmpty ? 'Нет оценок' : '${_reviews.length} отзывов',
+                        child: _StatCard(
+                          valueWidget: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.star,
+                                color: AppStyles.ratingColor,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _gym.rating > 0
+                                    ? _gym.rating.toStringAsFixed(1)
+                                    : '—',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppStyles.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          label: 'Рейтинг',
                         ),
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: _metricCard(
-                          icon: Icons.payments_outlined,
-                          iconColor: AppStyles.primaryColor,
-                          value: '${_gym.pricePerMonth.toInt()} ₽',
-                          label: 'в месяц',
+                        child: _StatCard(
+                          valueWidget: Text(
+                            '${_gym.pricePerMonth.toInt()} ₽',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: AppStyles.primaryColor,
+                            ),
+                          ),
+                          label: 'Цена / мес',
                         ),
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: _metricCard(
-                          icon: Icons.check_circle_outline,
-                          iconColor: Colors.green,
-                          value: '${_gym.amenities.length}',
-                          label: 'удобств',
+                        child: _StatCard(
+                          valueWidget: Text(
+                            '${_reviews.length}',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: AppStyles.textPrimary,
+                            ),
+                          ),
+                          label: 'Отзывов',
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: AppStyles.paddingLarge),
-                  Text('Удобства', style: AppStyles.titleStyle),
-                  SizedBox(height: AppStyles.paddingSmall),
+                  const SizedBox(height: 22),
+
+                  // === Удобства ===
+                  Text('УДОБСТВА', style: AppStyles.sectionLabel),
+                  const SizedBox(height: 10),
                   if (_gym.amenities.isEmpty)
                     Text('Информация не указана', style: AppStyles.subtitleStyle)
                   else
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: _gym.amenities.map((a) {
-                        return Container(
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isDark ? AppStyles.darkSurface : Color(0xFFEFEFF2),
-                            borderRadius: BorderRadius.circular(AppStyles.radiusSmall + 4),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(_getAmenityIcon(a), size: 16, color: AppStyles.primaryColor),
-                              SizedBox(width: 6),
-                              Text(a, style: TextStyle(fontWeight: FontWeight.w500)),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                      children: _gym.amenities.map(_buildAmenityChip).toList(),
                     ),
-                  SizedBox(height: AppStyles.paddingLarge),
-                  Row(
-                    children: [
-                      Text('Отзывы', style: AppStyles.titleStyle),
-                      SizedBox(width: 8),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppStyles.primaryColor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '${_reviews.length}',
-                          style: TextStyle(
-                            color: AppStyles.primaryColor,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
+                  const SizedBox(height: 22),
+
+                  // === Отзывы ===
+                  Text(
+                    'ОТЗЫВЫ · ${_reviews.length}',
+                    style: AppStyles.sectionLabel,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildReviewsSection(currentUser, provider.role),
+
+                  const SizedBox(height: 16),
+
+                  // === CTA "Оставить/изменить отзыв" ===
+                  // Если зал в корзине (не работает) — кнопка отключена.
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _gym.isDeleted ? null : _openReviewDialog,
+                      icon: Icon(
+                        _gym.isDeleted
+                            ? Icons.block
+                            : Icons.rate_review_outlined,
+                      ),
+                      label: Text(
+                        _gym.isDeleted
+                            ? 'Зал не работает'
+                            : (_reviews.any((r) => r.username == currentUser)
+                                ? 'Изменить отзыв'
+                                : 'Оставить отзыв'),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppStyles.primaryColor,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: AppStyles.darkSurface,
+                        disabledForegroundColor: AppStyles.textTertiary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        textStyle: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                  SizedBox(height: AppStyles.paddingSmall),
-                  _buildReviewsSection(currentUser, provider.role),
-                  SizedBox(height: 90),
                 ],
               ),
             ),
@@ -362,29 +435,54 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
     );
   }
 
-  Widget _metricCard({
-    required IconData icon,
-    required Color iconColor,
-    required String value,
-    required String label,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _heroGradient(List<Color> colors) {
     return Container(
-      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? AppStyles.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-        boxShadow: isDark ? null : [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: Offset(0, 2)),
-        ],
+        gradient: LinearGradient(
+          begin: const Alignment(-0.5, -1),
+          end: const Alignment(1, 1),
+          colors: [
+            colors[0],
+            colors[1],
+            AppStyles.primaryColor.withValues(alpha: 0.2),
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ),
       ),
-      child: Column(
+      child: Center(
+        child: Icon(
+          AppStyles.categoryIcon(_gym.type),
+          size: 110,
+          color: Colors.white.withValues(alpha: 0.18),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAmenityChip(String amenity) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppStyles.darkSurface,
+        borderRadius: BorderRadius.circular(AppStyles.radiusMedium - 2),
+        border: Border.all(color: AppStyles.darkBorderHi),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: iconColor, size: 22),
-          SizedBox(height: 6),
-          Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-          SizedBox(height: 2),
-          Text(label, style: TextStyle(fontSize: 11, color: Colors.grey), textAlign: TextAlign.center),
+          Icon(
+            AppStyles.amenityIcon(amenity),
+            size: 14,
+            color: AppStyles.primaryColor,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            amenity,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFFCCCCCC),
+            ),
+          ),
         ],
       ),
     );
@@ -392,132 +490,183 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
 
   Widget _buildReviewsSection(String currentUser, String role) {
     if (_reviewsLoading) {
-      return Padding(
-        padding: EdgeInsets.all(AppStyles.paddingMedium),
-        child: Center(child: CircularProgressIndicator(color: AppStyles.primaryColor)),
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: CircularProgressIndicator(color: AppStyles.primaryColor),
+        ),
       );
     }
     if (_reviewsError != null) {
       return Padding(
-        padding: EdgeInsets.all(AppStyles.paddingMedium),
+        padding: const EdgeInsets.all(AppStyles.paddingMedium),
         child: Column(
           children: [
-            Text('Ошибка: $_reviewsError', style: TextStyle(color: AppStyles.errorColor)),
-            TextButton(onPressed: _loadReviews, child: Text('Повторить')),
+            Text(
+              'Ошибка: $_reviewsError',
+              style: const TextStyle(color: AppStyles.errorColor),
+            ),
+            TextButton(
+              onPressed: _loadReviews,
+              child: const Text('Повторить'),
+            ),
           ],
         ),
       );
     }
     if (_reviews.isEmpty) {
       return Container(
-        padding: EdgeInsets.all(AppStyles.paddingLarge),
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? AppStyles.darkSurface
-              : Color(0xFFEFEFF2),
+          color: AppStyles.darkSurface,
           borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+          border: Border.all(color: AppStyles.darkBorder),
         ),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(Icons.rate_review_outlined, size: 40, color: Colors.grey),
-              SizedBox(height: 8),
-              Text('Пока нет отзывов', style: AppStyles.subtitleStyle),
-              Text('Будь первым!', style: AppStyles.subtitleStyle),
-            ],
-          ),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.rate_review_outlined,
+              size: 36,
+              color: AppStyles.textMuted,
+            ),
+            const SizedBox(height: 8),
+            Text('Пока нет отзывов', style: AppStyles.subtitleStyle),
+            Text('Будь первым!', style: AppStyles.subtitleStyle),
+          ],
         ),
       );
     }
     return Column(
-      children: _reviews.map((r) => _buildReviewCard(r, currentUser, role)).toList(),
+      children: _reviews
+          .map((r) => _buildReviewCard(r, currentUser, role))
+          .toList(),
     );
   }
 
   Widget _buildReviewCard(Review r, String currentUser, String role) {
     final canDelete = role == 'admin' || r.username == currentUser;
     final isMine = r.username == currentUser;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final initial = r.username.isNotEmpty ? r.username[0].toUpperCase() : '?';
+
     return Container(
-      margin: EdgeInsets.only(bottom: AppStyles.paddingSmall),
-      padding: EdgeInsets.all(AppStyles.paddingMedium),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       decoration: BoxDecoration(
-        color: isDark ? AppStyles.darkSurface : Colors.white,
+        color: AppStyles.darkSurface,
         borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-        border: isMine ? Border.all(color: AppStyles.primaryColor.withOpacity(0.5), width: 1.5) : null,
+        border: Border.all(
+          color: isMine
+              ? AppStyles.primaryColor.withValues(alpha: 0.4)
+              : AppStyles.darkBorder,
+          width: isMine ? 1.2 : 1,
+        ),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  gradient: AppStyles.primaryGradient,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  r.username.isNotEmpty ? r.username[0].toUpperCase() : '?',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
-                ),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppStyles.primaryColor,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              initial,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
               ),
-              SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Text(r.username, style: TextStyle(fontWeight: FontWeight.w700)),
-                        if (isMine) ...[
-                          SizedBox(width: 6),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppStyles.primaryColor.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'вы',
-                              style: TextStyle(
-                                color: AppStyles.primaryColor,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+                    Text(
+                      r.username,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: Color(0xFFDDDDDD),
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: List.generate(5, (i) {
                         return Icon(
                           i < r.rating ? Icons.star : Icons.star_border,
-                          size: 14,
-                          color: Colors.amber,
+                          size: 12,
+                          color: i < r.rating
+                              ? AppStyles.ratingColor
+                              : const Color(0xFF444444),
                         );
                       }),
                     ),
+                    if (isMine) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppStyles.primaryColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'вы',
+                          style: TextStyle(
+                            color: AppStyles.primaryColor,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    Text(
+                      _formatDate(r.createdAt),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppStyles.textMuted,
+                      ),
+                    ),
+                    if (canDelete)
+                      GestureDetector(
+                        onTap: () => _deleteReview(r),
+                        child: const Padding(
+                          padding: EdgeInsets.only(left: 8),
+                          child: Icon(
+                            Icons.delete_outline,
+                            size: 16,
+                            color: AppStyles.textMuted,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
-              ),
-              Text(_formatDate(r.createdAt), style: TextStyle(fontSize: 12, color: Colors.grey)),
-              if (canDelete)
-                IconButton(
-                  icon: Icon(Icons.delete_outline, size: 20, color: Colors.grey),
-                  onPressed: () => _deleteReview(r),
-                  padding: EdgeInsets.zero,
-                  constraints: BoxConstraints(minWidth: 32, minHeight: 32),
-                ),
-            ],
+                if (r.text.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    r.text,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF999999),
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-          if (r.text.isNotEmpty) ...[
-            SizedBox(height: 8),
-            Text(r.text, style: TextStyle(height: 1.35)),
-          ],
         ],
       ),
     );
@@ -529,23 +678,118 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
         '${d.month.toString().padLeft(2, '0')}.'
         '${d.year}';
   }
+}
 
-  IconData _getAmenityIcon(String amenity) {
-    switch (amenity) {
-      case 'душ': return Icons.shower;
-      case 'сауна': return Icons.hot_tub;
-      case 'парковка': return Icons.local_parking;
-      case 'тренер': return Icons.person;
-      case 'Wi-Fi': return Icons.wifi;
-      case 'бассейн': return Icons.pool;
-      case 'ринг': return Icons.sports_mma;
-      case 'чай': return Icons.local_cafe;
-      default: return Icons.check_circle;
-    }
+// ─── ВСПОМОГАТЕЛЬНЫЕ ВИДЖЕТЫ ───────────────────────────────────────────
+
+class _GlassButton extends StatelessWidget {
+  final IconData icon;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _GlassButton({
+    required this.icon,
+    this.active = false,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: active
+                ? AppStyles.primaryColor.withValues(alpha: 0.4)
+                : Colors.white.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: active ? AppStyles.primaryColor : Colors.white,
+        ),
+      ),
+    );
   }
 }
 
-// === диалог отзыва ===
+class _StatCard extends StatelessWidget {
+  final Widget valueWidget;
+  final String label;
+
+  const _StatCard({required this.valueWidget, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppStyles.darkSurface,
+        borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+        border: Border.all(color: AppStyles.darkBorder),
+      ),
+      child: Column(
+        children: [
+          valueWidget,
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppStyles.textMuted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OpenStatusPill extends StatelessWidget {
+  final bool isOpen;
+  const _OpenStatusPill({required this.isOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(AppStyles.radiusPill),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: isOpen ? AppStyles.successColor : const Color(0xFF555555),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            isOpen ? 'Сейчас открыто' : 'Не работает',
+            style: TextStyle(
+              color: isOpen ? AppStyles.successColor : AppStyles.textSecondary,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// === Диалог отзыва ===
 
 class _ReviewInput {
   final int rating;
@@ -588,66 +832,72 @@ class _ReviewDialogState extends State<_ReviewDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppStyles.radiusLarge)),
+      backgroundColor: AppStyles.darkSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
+        side: const BorderSide(color: AppStyles.darkBorder),
+      ),
       child: Padding(
-        padding: EdgeInsets.all(AppStyles.paddingLarge),
+        padding: const EdgeInsets.all(AppStyles.paddingLarge),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               widget.isEditing ? 'Изменить отзыв' : 'Оставить отзыв',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppStyles.textPrimary,
+              ),
             ),
-            SizedBox(height: AppStyles.paddingMedium),
-            Text('Ваша оценка', style: AppStyles.subtitleStyle),
-            SizedBox(height: 8),
+            const SizedBox(height: AppStyles.paddingMedium),
+            const Text(
+              'Ваша оценка',
+              style: TextStyle(color: AppStyles.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(5, (i) {
                 final value = i + 1;
                 return IconButton(
-                  iconSize: 36,
+                  iconSize: 32,
                   onPressed: () => setState(() => _rating = value),
                   icon: Icon(
                     value <= _rating ? Icons.star : Icons.star_border,
-                    color: Colors.amber,
+                    color: AppStyles.ratingColor,
                   ),
                 );
               }),
             ),
-            SizedBox(height: AppStyles.paddingSmall),
+            const SizedBox(height: AppStyles.paddingSmall),
             TextField(
               controller: _textController,
               maxLines: 4,
               maxLength: 1000,
-              decoration: InputDecoration(
+              style: const TextStyle(color: AppStyles.textPrimary),
+              decoration: const InputDecoration(
                 hintText: 'Комментарий (необязательно)',
               ),
             ),
-            SizedBox(height: AppStyles.paddingMedium),
+            const SizedBox(height: AppStyles.paddingMedium),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppStyles.radiusSmall + 4),
-                      ),
-                    ),
-                    child: Text('Отмена'),
+                    child: const Text('Отмена'),
                   ),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () => Navigator.pop(
                       context,
                       _ReviewInput(_rating, _textController.text.trim()),
                     ),
-                    child: Text('Сохранить'),
+                    child: const Text('Сохранить'),
                   ),
                 ),
               ],

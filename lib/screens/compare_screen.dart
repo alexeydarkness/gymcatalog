@@ -4,46 +4,65 @@ import '../models/gym.dart';
 import '../providers/gym_provider.dart';
 import '../styles/app_styles.dart';
 
+/// Экран сравнения залов.
+///
+/// Структура: горизонтальный стрип-карточек сверху, ниже секции
+/// с параметрами (рейтинг, цена, тип, удобства). В каждой секции
+/// слева — название параметра, справа — по колонке на каждый зал.
 class CompareScreen extends StatelessWidget {
+  const CompareScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<GymProvider>();
     final gyms = provider.compareGyms;
 
     return Scaffold(
+      backgroundColor: AppStyles.darkBg,
       appBar: AppBar(
-        title: Text('Сравнение'),
+        title: const Text('Сравнение'),
         actions: [
           if (gyms.isNotEmpty)
             IconButton(
               tooltip: 'Очистить',
-              icon: Icon(Icons.delete_sweep_outlined),
+              icon: const Icon(Icons.delete_sweep_outlined, size: 20),
+              color: AppStyles.textSecondary,
               onPressed: () => provider.clearCompare(),
             ),
         ],
       ),
-      body: gyms.isEmpty ? _buildEmpty(context) : _buildCompare(context, gyms, provider),
+      body: gyms.isEmpty
+          ? _buildEmpty(context)
+          : _buildCompare(context, gyms, provider),
     );
   }
 
   Widget _buildEmpty(BuildContext context) {
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(AppStyles.paddingLarge),
+        padding: const EdgeInsets.all(AppStyles.paddingLarge),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppStyles.primaryColor.withOpacity(0.1),
+                color: AppStyles.primaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.compare_arrows, size: 56, color: AppStyles.primaryColor),
+              child: const Icon(
+                Icons.compare_arrows,
+                size: 56,
+                color: AppStyles.primaryColor,
+              ),
             ),
-            SizedBox(height: AppStyles.paddingLarge),
-            Text('Список сравнения пуст', style: AppStyles.titleStyle, textAlign: TextAlign.center),
-            SizedBox(height: 8),
+            const SizedBox(height: AppStyles.paddingLarge),
+            Text(
+              'Список сравнения пуст',
+              style: AppStyles.titleStyle,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
             Text(
               'Добавьте до ${GymProvider.maxCompare} залов через значок сравнения на карточке',
               style: AppStyles.subtitleStyle,
@@ -56,70 +75,120 @@ class CompareScreen extends StatelessWidget {
   }
 
   Widget _buildCompare(BuildContext context, List<Gym> gyms, GymProvider provider) {
-    final maxRating = gyms.map((g) => g.rating).reduce((a, b) => a > b ? a : b);
-    final minPrice = gyms.map((g) => g.pricePerMonth).reduce((a, b) => a < b ? a : b);
+    final maxRating = gyms
+        .map((g) => g.rating)
+        .reduce((a, b) => a > b ? a : b);
+    final minPrice = gyms
+        .map((g) => g.pricePerMonth)
+        .reduce((a, b) => a < b ? a : b);
+
+    // Все уникальные удобства из выбранных залов.
+    final allAmenities = <String>{};
+    for (final g in gyms) {
+      allAmenities.addAll(g.amenities);
+    }
+    final sortedAmenities = allAmenities.toList()..sort();
 
     return ListView(
-      padding: EdgeInsets.all(AppStyles.paddingMedium),
+      padding: const EdgeInsets.all(AppStyles.paddingMedium),
       children: [
-        // горизонтально прокручивающиеся карточки залов сверху
+        // Стрип карточек залов сверху
         SizedBox(
-          height: 210,
+          height: 200,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: gyms.length,
-            separatorBuilder: (_, __) => SizedBox(width: 10),
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
             itemBuilder: (_, i) => _gymCard(context, gyms[i], provider),
           ),
         ),
-        SizedBox(height: AppStyles.paddingLarge),
-        // сравнение по параметрам
-        _sectionCard(
-          context: context,
+        const SizedBox(height: AppStyles.paddingLarge),
+
+        // Параметры — каждая секция с колонками на зал
+        _SectionCard(
           title: 'Рейтинг',
           icon: Icons.star_outline,
-          rows: gyms.map((g) {
-            final isBest = g.rating > 0 && g.rating == maxRating;
-            return _paramRow(
-              name: g.name,
-              value: g.rating > 0 ? g.rating.toStringAsFixed(1) : '—',
-              isBest: isBest,
-              trailing: Icon(Icons.star, color: Colors.amber, size: 16),
-            );
-          }).toList(),
+          gyms: gyms,
+          rows: [
+            _ParamRow(
+              label: 'Оценка',
+              values: gyms.map((g) {
+                final isBest = g.rating > 0 && g.rating == maxRating;
+                return _CellValue(
+                  text: g.rating > 0 ? g.rating.toStringAsFixed(1) : '—',
+                  isBest: isBest && gyms.length > 1,
+                );
+              }).toList(),
+            ),
+          ],
         ),
-        _sectionCard(
-          context: context,
-          title: 'Цена в месяц',
+        _SectionCard(
+          title: 'Цена',
           icon: Icons.payments_outlined,
-          rows: gyms.map((g) {
-            final isBest = g.pricePerMonth == minPrice;
-            return _paramRow(
-              name: g.name,
-              value: '${g.pricePerMonth.toInt()} ₽',
-              isBest: isBest,
-            );
-          }).toList(),
+          gyms: gyms,
+          rows: [
+            _ParamRow(
+              label: 'В месяц',
+              values: gyms.map((g) {
+                final isBest = g.pricePerMonth == minPrice;
+                return _CellValue(
+                  text: '${g.pricePerMonth.toInt()} ₽',
+                  isBest: isBest && gyms.length > 1,
+                );
+              }).toList(),
+            ),
+          ],
         ),
-        _sectionCard(
-          context: context,
+        _SectionCard(
           title: 'Тип',
           icon: Icons.category_outlined,
-          rows: gyms.map((g) => _paramRow(name: g.name, value: g.type)).toList(),
+          gyms: gyms,
+          rows: [
+            _ParamRow(
+              label: 'Категория',
+              values: gyms.map((g) => _CellValue(text: g.type)).toList(),
+            ),
+          ],
         ),
-        _amenitiesSection(context, gyms),
-        SizedBox(height: AppStyles.paddingLarge),
+        _SectionCard(
+          title: 'Удобства',
+          icon: Icons.check_circle_outline,
+          gyms: gyms,
+          rows: sortedAmenities.isEmpty
+              ? [
+                  const _ParamRow(
+                    label: 'Нет данных',
+                    values: [],
+                    isAmenity: true,
+                  ),
+                ]
+              : sortedAmenities
+                  .map((amenity) => _ParamRow(
+                        label: amenity,
+                        isAmenity: true,
+                        values: gyms
+                            .map((g) => _CellValue(
+                                  text: g.amenities.contains(amenity) ? '✓' : '—',
+                                  has: g.amenities.contains(amenity),
+                                ))
+                            .toList(),
+                      ))
+                  .toList(),
+        ),
+        const SizedBox(height: AppStyles.paddingLarge),
       ],
     );
   }
 
   Widget _gymCard(BuildContext context, Gym gym, GymProvider provider) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppStyles.categoryGradient(gym.type);
+
     return Container(
       width: 160,
       decoration: BoxDecoration(
-        color: isDark ? AppStyles.darkSurface : Colors.white,
+        color: AppStyles.darkSurface,
         borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+        border: Border.all(color: AppStyles.darkBorder),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -131,23 +200,23 @@ class CompareScreen extends StatelessWidget {
                   ? Image.network(
                       gym.imageUrl,
                       width: double.infinity,
-                      height: 110,
+                      height: 100,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _imgFallback(),
+                      errorBuilder: (_, __, ___) => _imgFallback(gym, colors),
                     )
-                  : _imgFallback(),
+                  : _imgFallback(gym, colors),
               Positioned(
                 top: 6,
                 right: 6,
                 child: Material(
-                  color: Colors.black.withOpacity(0.5),
-                  shape: CircleBorder(),
+                  color: Colors.black.withValues(alpha: 0.5),
+                  shape: const CircleBorder(),
                   child: InkWell(
-                    customBorder: CircleBorder(),
+                    customBorder: const CircleBorder(),
                     onTap: () => provider.toggleCompare(gym.id),
-                    child: Padding(
+                    child: const Padding(
                       padding: EdgeInsets.all(6),
-                      child: Icon(Icons.close, size: 16, color: Colors.white),
+                      child: Icon(Icons.close, size: 14, color: Colors.white),
                     ),
                   ),
                 ),
@@ -155,35 +224,53 @@ class CompareScreen extends StatelessWidget {
             ],
           ),
           Padding(
-            padding: EdgeInsets.all(10),
+            padding: const EdgeInsets.all(10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   gym.name,
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: AppStyles.textPrimary,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   gym.address,
-                  style: AppStyles.subtitleStyle.copyWith(fontSize: 11),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppStyles.textTertiary,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 6),
+                const SizedBox(height: 6),
                 Row(
                   children: [
                     if (gym.rating > 0) ...[
-                      Icon(Icons.star, color: Colors.amber, size: 12),
-                      SizedBox(width: 2),
-                      Text(gym.rating.toStringAsFixed(1), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                      const Icon(Icons.star, color: AppStyles.ratingColor, size: 12),
+                      const SizedBox(width: 2),
+                      Text(
+                        gym.rating.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppStyles.textPrimary,
+                        ),
+                      ),
                     ],
-                    Spacer(),
+                    const Spacer(),
                     Text(
                       '${gym.pricePerMonth.toInt()} ₽',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppStyles.primaryColor),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppStyles.primaryColor,
+                      ),
                     ),
                   ],
                 ),
@@ -195,158 +282,216 @@ class CompareScreen extends StatelessWidget {
     );
   }
 
-  Widget _imgFallback() {
+  Widget _imgFallback(Gym gym, List<Color> colors) {
     return Container(
       width: double.infinity,
-      height: 110,
-      decoration: BoxDecoration(gradient: AppStyles.primaryGradient),
-      child: Icon(Icons.fitness_center, size: 36, color: Colors.white54),
-    );
-  }
-
-  Widget _sectionCard({
-    required BuildContext context,
-    required String title,
-    required IconData icon,
-    required List<Widget> rows,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: EdgeInsets.only(bottom: AppStyles.paddingMedium),
+      height: 100,
       decoration: BoxDecoration(
-        color: isDark ? AppStyles.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors,
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.all(AppStyles.paddingMedium),
-            child: Row(
-              children: [
-                Icon(icon, size: 18, color: AppStyles.primaryColor),
-                SizedBox(width: 8),
-                Text(title, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-              ],
-            ),
-          ),
-          Divider(height: 1),
-          ...rows,
-        ],
+      alignment: Alignment.center,
+      child: Icon(
+        AppStyles.categoryIcon(gym.type),
+        size: 32,
+        color: Colors.white.withValues(alpha: 0.4),
       ),
     );
   }
+}
 
-  Widget _paramRow({
-    required String name,
-    required String value,
-    bool isBest = false,
-    Widget? trailing,
-  }) {
+// =====================================================================
+// СЕКЦИИ И СТРОКИ ПАРАМЕТРОВ
+// =====================================================================
+
+/// Значение в одной ячейке (колонке зала).
+class _CellValue {
+  final String text;
+  final bool isBest;
+  /// Для удобств: true — есть, false — нет (рисуем иконку, а не текст).
+  final bool? has;
+
+  const _CellValue({required this.text, this.isBest = false, this.has});
+}
+
+/// Строка параметра: слева подпись, справа N колонок-значений.
+class _ParamRow extends StatelessWidget {
+  final String label;
+  final List<_CellValue> values;
+  /// Если true — рисуем зелёные галочки/прочерки вместо текста.
+  final bool isAmenity;
+
+  const _ParamRow({
+    required this.label,
+    required this.values,
+    this.isAmenity = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppStyles.paddingMedium, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppStyles.paddingMedium,
+        vertical: 11,
+      ),
       child: Row(
         children: [
           Expanded(
+            flex: 2,
             child: Text(
-              name,
-              style: TextStyle(fontSize: 13, color: Colors.grey),
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: isAmenity
+                    ? AppStyles.textPrimary
+                    : AppStyles.textSecondary,
+                fontWeight: isAmenity ? FontWeight.w500 : FontWeight.w400,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (trailing != null) ...[trailing, SizedBox(width: 4)],
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              color: isBest ? Colors.green : null,
+          for (final v in values)
+            Expanded(
+              child: _Cell(value: v, isAmenity: isAmenity),
             ),
-          ),
-          if (isBest) ...[
-            SizedBox(width: 6),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                'лучший',
-                style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.w700),
-              ),
-            ),
-          ],
         ],
       ),
     );
   }
+}
 
-  Widget _amenitiesSection(BuildContext context, List<Gym> gyms) {
-    final all = <String>{};
-    for (final g in gyms) {
-      all.addAll(g.amenities);
-    }
-    final sorted = all.toList()..sort();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+class _Cell extends StatelessWidget {
+  final _CellValue value;
+  final bool isAmenity;
 
-    if (sorted.isEmpty) {
-      return _sectionCard(
-        context: context,
-        title: 'Удобства',
-        icon: Icons.check_circle_outline,
-        rows: [
-          Padding(
-            padding: EdgeInsets.all(AppStyles.paddingMedium),
-            child: Text('Нет данных', style: AppStyles.subtitleStyle),
-          ),
-        ],
+  const _Cell({required this.value, required this.isAmenity});
+
+  @override
+  Widget build(BuildContext context) {
+    if (isAmenity) {
+      final has = value.has ?? false;
+      return Center(
+        child: Icon(
+          has ? Icons.check_circle : Icons.remove_circle_outline,
+          color: has
+              ? AppStyles.successColor
+              : AppStyles.textMuted.withValues(alpha: 0.5),
+          size: 20,
+        ),
       );
     }
 
-    return Container(
-      margin: EdgeInsets.only(bottom: AppStyles.paddingMedium),
-      decoration: BoxDecoration(
-        color: isDark ? AppStyles.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+    return Center(
+      child: Container(
+        padding: value.isBest
+            ? const EdgeInsets.symmetric(horizontal: 8, vertical: 3)
+            : null,
+        decoration: value.isBest
+            ? BoxDecoration(
+                color: AppStyles.successColor.withValues(alpha: 0.13),
+                borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
+                border: Border.all(
+                  color: AppStyles.successColor.withValues(alpha: 0.3),
+                ),
+              )
+            : null,
+        child: Text(
+          value.text,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: value.isBest
+                ? AppStyles.successColor
+                : AppStyles.textPrimary,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final List<Gym> gyms;
+  final List<_ParamRow> rows;
+
+  const _SectionCard({
+    required this.title,
+    required this.icon,
+    required this.gyms,
+    required this.rows,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppStyles.paddingMedium),
+      decoration: BoxDecoration(
+        color: AppStyles.darkSurface,
+        borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+        border: Border.all(color: AppStyles.darkBorder),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Заголовок секции
           Padding(
-            padding: EdgeInsets.all(AppStyles.paddingMedium),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
             child: Row(
               children: [
-                Icon(Icons.check_circle_outline, size: 18, color: AppStyles.primaryColor),
-                SizedBox(width: 8),
-                Text('Удобства', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                Icon(icon, size: 16, color: AppStyles.primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: AppStyles.textPrimary,
+                  ),
+                ),
               ],
             ),
           ),
-          Divider(height: 1),
-          ...sorted.map((amenity) {
-            return Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppStyles.paddingMedium, vertical: 10),
-              child: Row(
-                children: [
+          // Шапка колонок: справа от подписи параметра — короткие имена залов
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppStyles.paddingMedium,
+              vertical: 8,
+            ),
+            child: Row(
+              children: [
+                const Expanded(flex: 2, child: SizedBox()),
+                for (final gym in gyms)
                   Expanded(
-                    child: Text(amenity, style: TextStyle(fontWeight: FontWeight.w600)),
-                  ),
-                  ...gyms.map((gym) {
-                    final has = gym.amenities.contains(amenity);
-                    return Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(
-                        has ? Icons.check_circle : Icons.remove_circle_outline,
-                        color: has ? Colors.green : Colors.grey.withOpacity(0.4),
-                        size: 22,
+                    child: Center(
+                      child: Text(
+                        gym.name,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppStyles.textTertiary,
+                          letterSpacing: 0.3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
-                    );
-                  }),
-                ],
-              ),
-            );
-          }),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: AppStyles.darkDivider),
+          ...rows,
         ],
       ),
     );

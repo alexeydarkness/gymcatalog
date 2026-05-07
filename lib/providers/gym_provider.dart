@@ -47,7 +47,8 @@ class GymProvider extends ChangeNotifier {
 
   List<Gym> get filteredGyms {
     var list = _gyms.where((gym) {
-      if (gym.isDeleted) return false;
+      // Удалённые залы (в корзине) НЕ скрываются — их видят все,
+      // но в UI они помечаются как "Не работает".
       if (selectedType != null && gym.type != selectedType) return false;
       for (var amenity in selectedAmenities) {
         if (!gym.amenities.contains(amenity)) return false;
@@ -113,7 +114,18 @@ class GymProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _gyms = await ApiServices.fetchGyms();
+      final results = await Future.wait([
+        ApiServices.fetchGyms(),
+        ApiServices.fetchDeletedGyms().catchError((_) => <Gym>[]),
+      ]);
+      final active = results[0];
+      final deleted = results[1];
+      for (final g in deleted) {
+        g.isDeleted = true;
+      }
+
+      _gyms = [...active, ...deleted];
+
       final favoriteIds = await StorageService.getFavorites(username);
       for (var gym in _gyms) {
         if (favoriteIds.contains(gym.id)) gym.isFavorite = true;
@@ -202,7 +214,7 @@ class GymProvider extends ChangeNotifier {
     if (_compareIds.contains(gymId)) {
       _compareIds.remove(gymId);
     } else {
-      if (_compareIds.length >= maxCompare) return; // лимит
+      if (_compareIds.length >= maxCompare) return;
       _compareIds.add(gymId);
     }
     notifyListeners();

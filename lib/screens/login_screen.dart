@@ -5,6 +5,8 @@ import 'gym_list_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   State<StatefulWidget> createState() => _LoginScreenState();
 }
@@ -57,15 +59,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
+      backgroundColor: AppStyles.darkBg,
       body: Stack(
         children: [
-          // градиентная шапка сверху
+          // Градиентная шапка сверху, в духе hero-секций макета
           Container(
             height: MediaQuery.of(context).size.height * 0.45,
             decoration: BoxDecoration(
-              gradient: AppStyles.primaryGradient,
+              gradient: LinearGradient(
+                begin: const Alignment(-0.6, -1),
+                end: const Alignment(1, 1),
+                colors: [
+                  const Color(0xFF1A0505),
+                  const Color(0xFF2A0808),
+                  AppStyles.primaryColor.withValues(alpha: 0.27),
+                ],
+                stops: const [0.0, 0.5, 1.0],
+              ),
             ),
             child: SafeArea(
               child: Center(
@@ -73,29 +84,36 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      padding: EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          width: 2,
+                        ),
                       ),
-                      child: Icon(Icons.fitness_center, size: 56, color: Colors.white),
+                      child: const Icon(
+                        Icons.fitness_center,
+                        size: 56,
+                        color: Colors.white,
+                      ),
                     ),
-                    SizedBox(height: AppStyles.paddingMedium),
-                    Text(
+                    const SizedBox(height: 18),
+                    const Text(
                       'GYM CATALOG',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 28,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: 2,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       'Найди свой зал',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.85),
+                        color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 14,
                       ),
                     ),
@@ -104,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-          // карточка формы поверх
+          // Карточка формы
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -113,11 +131,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 top: AppStyles.paddingLarge + 8,
                 left: AppStyles.paddingLarge,
                 right: AppStyles.paddingLarge,
-                bottom: MediaQuery.of(context).viewInsets.bottom + AppStyles.paddingLarge,
+                bottom: MediaQuery.of(context).viewInsets.bottom +
+                    AppStyles.paddingLarge,
               ),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              decoration: const BoxDecoration(
+                color: AppStyles.darkBg,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border(
+                  top: BorderSide(color: AppStyles.darkBorder),
+                ),
               ),
               child: SingleChildScrollView(
                 child: Form(
@@ -131,19 +153,30 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: isDark ? Colors.white24 : Colors.black12,
+                            color: AppStyles.darkBorderHi,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                       ),
-                      SizedBox(height: AppStyles.paddingLarge),
-                      Text('Вход', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
-                      SizedBox(height: 4),
-                      Text('Войдите, чтобы продолжить', style: AppStyles.subtitleStyle),
-                      SizedBox(height: AppStyles.paddingLarge),
+                      const SizedBox(height: AppStyles.paddingLarge),
+                      const Text(
+                        'Вход',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: AppStyles.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Войдите, чтобы продолжить',
+                        style: AppStyles.subtitleStyle,
+                      ),
+                      const SizedBox(height: AppStyles.paddingLarge),
                       TextFormField(
                         controller: _loginController,
-                        decoration: InputDecoration(
+                        style: const TextStyle(color: AppStyles.textPrimary),
+                        decoration: const InputDecoration(
                           labelText: 'Логин',
                           prefixIcon: Icon(Icons.person_outline),
                         ),
@@ -154,62 +187,95 @@ class _LoginScreenState extends State<LoginScreen> {
                           return null;
                         },
                       ),
-                      SizedBox(height: AppStyles.paddingMedium),
+                      const SizedBox(height: AppStyles.paddingMedium),
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
+                        style: const TextStyle(color: AppStyles.textPrimary),
                         decoration: InputDecoration(
                           labelText: 'Пароль',
-                          prefixIcon: Icon(Icons.lock_outline),
+                          prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
-                            icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
                           ),
                         ),
-                        validator: (v) => (v == null || v.isEmpty) ? 'Введите пароль' : null,
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Введите пароль' : null,
                       ),
                       if (_error != null) ...[
-                        SizedBox(height: AppStyles.paddingSmall),
+                        const SizedBox(height: AppStyles.paddingSmall),
                         Container(
-                          padding: EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppStyles.errorColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
+                            color: AppStyles.errorColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(
+                              AppStyles.radiusMedium,
+                            ),
+                            border: Border.all(
+                              color: AppStyles.errorColor.withValues(alpha: 0.27),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.error_outline, color: AppStyles.errorColor, size: 20),
-                              SizedBox(width: 8),
+                              const Icon(
+                                Icons.error_outline,
+                                color: AppStyles.errorColor,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
                               Expanded(
-                                child: Text(_error!, style: TextStyle(color: AppStyles.errorColor)),
+                                child: Text(
+                                  _error!,
+                                  style: const TextStyle(
+                                    color: AppStyles.errorColor,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         ),
                       ],
-                      SizedBox(height: AppStyles.paddingLarge),
+                      const SizedBox(height: AppStyles.paddingLarge),
                       SizedBox(
                         height: 52,
                         child: ElevatedButton(
                           onPressed: _login,
                           child: _isLoading
-                              ? SizedBox(
+                              ? const SizedBox(
                                   height: 20,
                                   width: 20,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
                                 )
-                              : Text('ВОЙТИ', style: TextStyle(fontSize: 16, letterSpacing: 1)),
+                              : const Text(
+                                  'ВОЙТИ',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
                         ),
                       ),
-                      SizedBox(height: AppStyles.paddingMedium),
+                      const SizedBox(height: AppStyles.paddingMedium),
                       TextButton(
                         onPressed: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => RegisterScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterScreen(),
+                          ),
                         ),
                         child: RichText(
-                          text: TextSpan(
-                            style: TextStyle(color: AppStyles.subtitleStyle.color),
+                          text: const TextSpan(
+                            style: TextStyle(color: AppStyles.textTertiary),
                             children: [
                               TextSpan(text: 'Нет аккаунта? '),
                               TextSpan(

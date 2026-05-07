@@ -4,6 +4,8 @@ import '../services/api_services.dart';
 import 'gym_list_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
   @override
   State<StatefulWidget> createState() => _RegisterScreenState();
 }
