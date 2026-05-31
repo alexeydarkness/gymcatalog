@@ -708,10 +708,6 @@ class _GymListScreenState extends State<GymListScreen> {
   }
 }
 
-// =====================================================================
-// ВИДЖЕТЫ
-// =====================================================================
-
 class _CategoryChip extends StatelessWidget {
   final String label;
   final bool active;

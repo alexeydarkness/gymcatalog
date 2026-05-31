@@ -9,11 +9,8 @@ class ApiServices {
   static const String _authUrl = '$_host/api/auth';
   static const Duration _timeout = Duration(seconds: 10);
 
-  static String? _token;
-
   static Map<String, String> get _headers => {
     'Content-Type': 'application/json; charset=UTF-8',
-    if (_token != null) 'Authorization': 'Bearer $_token',
   };
 
 
@@ -24,7 +21,7 @@ class ApiServices {
       final List<dynamic> jsonList = jsonDecode(response.body);
       return jsonList.map((json) => Gym.fromJson(json)).toList();
     } else {
-      throw Exception('Ошибка загрзки!: ${response.statusCode}');
+      throw Exception('Ошибка загрузки!: ${response.statusCode}');
     }
   }
 
@@ -95,7 +92,6 @@ class ApiServices {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        _token = data['token'];
         return data;
       } else {
         final error = jsonDecode(response.body);
@@ -112,7 +108,6 @@ class ApiServices {
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        _token = data['token'];
         return data;
       } else {
         final error = jsonDecode(response.body);
@@ -121,10 +116,7 @@ class ApiServices {
   }
 
   static void logout() {
-    _token = null;
   }
-
-  // === ОТЗЫВЫ ===
 
   static Future<List<Review>> fetchReviews(int gymId) async {
     final response = await http

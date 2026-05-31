@@ -15,13 +15,13 @@ class Review {
     required this.createdAt,
   });
 
-    factory Review.fromJson(Map<String, dynamic> json) {
-    final dynamic rawId = json['id'] ?? json['Id'] ?? json['ID'];
+  factory Review.fromJson(Map<String, dynamic> json) {
+    final dynamic rawId = json['id'];
     final int parsedId = rawId is num
         ? rawId.toInt()
         : int.tryParse(rawId?.toString() ?? '') ?? 0;
 
-    final dynamic rawGymId = json['gymId'] ?? json['GymId'];
+    final dynamic rawGymId = json['gymId'];
     final int parsedGymId = rawGymId is num
         ? rawGymId.toInt()
         : int.tryParse(rawGymId?.toString() ?? '') ?? 0;
@@ -35,6 +35,7 @@ class Review {
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
     );
   }
+
   Map<String, dynamic> toJson() => {
         'username': username,
         'rating': rating,
